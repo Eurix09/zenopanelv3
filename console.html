@@ -1,0 +1,172 @@
+
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Console Logs</title>
+                <style>
+                    body {
+                        font-family: monospace;
+                        background: #1e1e1e;
+                        color: #fff;
+                        margin: 20px;
+                    }
+                    .button-container {
+                        display: flex;
+                        gap: 10px;
+                        margin-bottom: 10px;
+                    }
+                    .download-btn {
+                        background: #4CAF50;
+                        color: white;
+                        border: none;
+                        padding: 8px 16px;
+                        border-radius: 4px;
+                        cursor: pointer;
+                    }
+                    .download-btn:hover {
+                        background: #45a049;
+                    }
+                    #logContainer {
+                        background: #000;
+                        padding: 15px;
+                        border-radius: 5px;
+                        white-space: pre-wrap;
+                        max-height: 80vh;
+                        overflow-y: auto;
+                    }
+                    .log {
+                        margin: 5px 0;
+                        padding: 5px;
+                        border-bottom: 1px solid #333;
+                        font-family: 'Courier New', monospace;
+                        font-size: 14px;
+                    }
+                    .timestamp {
+                        color: #888;
+                        margin-right: 8px;
+                    }
+                    .error { color: #ff6b6b; }
+                    .warning { color: #ffd93d; }
+                    .info { color: #69db7c; }
+                    .message { color: #4dabf7; }
+                    .system { color: #da77f2; }
+                    .download-btn {
+                        background: #22b8cf;
+                        color: white;
+                        border: none;
+                        padding: 5px 10px;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        margin-left: 10px;
+                        font-size: 12px;
+                    }
+                    .download-btn:hover {
+                        background: #15aabf;
+                    }
+                    .clear-btn {
+                        background: #e03131;
+                        color: white;
+                        border: none;
+                        padding: 8px 16px;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        margin-bottom: 10px;
+                    }
+                    .clear-btn:hover {
+                        background: #c92a2a;
+                    }
+                </style>
+            </head>
+            <body>
+                <h2>Console Logs</h2>
+                <div class="button-container">
+                    <button class="clear-btn" onclick="clearLogs()">Clear Logs</button>
+                    <button class="download-btn" onclick="downloadLogs()">Download Logs</button>
+                </div>
+                <script>
+                    function downloadLogs() {
+                        const logContainer = document.getElementById('logContainer');
+                        const logsText = logContainer.innerText;
+                        const blob = new Blob([logsText], { type: 'text/plain' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'console_logs.txt';
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                    }
+                </script>
+                <div id="logContainer"></div>
+                <script>
+                    function getMessageType(log) {
+                        if (log.type) return log.type;
+                        if (typeof log.message === 'string') {
+                            if (log.message.includes('Error:')) return 'error';
+                            if (log.message.includes('Warning:')) return 'warning';
+                            if (log.message.includes('sent') || log.message.includes('received')) return 'message';
+                        }
+                        return 'info';
+                    }
+
+                    function formatLogMessage(log) {
+                        if (typeof log.message === 'object' && log.message !== null) {
+                            return JSON.stringify(log.message, null, 2);
+                        }
+                        return log.message;
+                    }
+
+                    function clearLogs() {
+                        document.getElementById('logContainer').innerHTML = '';
+                    }
+
+                    function createLogElement(log) {
+                        const logEl = document.createElement('div');
+                        const type = getMessageType(log);
+                        logEl.className = `log ${type}`;
+
+                        const timestamp = document.createElement('span');
+                        timestamp.className = 'timestamp';
+                        timestamp.textContent = `[${log.timestamp}]`;
+
+                        const message = document.createElement('span');
+                        message.className = 'message-content';
+                        message.textContent = formatLogMessage(log);
+
+                        logEl.appendChild(timestamp);
+                        logEl.appendChild(message);
+
+                        if (log.fileUrl) {
+                            const downloadBtn = document.createElement('button');
+                            downloadBtn.className = 'download-btn';
+                            downloadBtn.textContent = 'Download';
+                            downloadBtn.onclick = () => window.open(log.fileUrl, '_blank');
+                            logEl.appendChild(downloadBtn);
+                        }
+
+                        return logEl;
+                    }
+
+                    async function fetchLogs() {
+                        try {
+                            const response = await fetch('/api/logs');
+                            const logs = await response.json();
+                            const container = document.getElementById('logContainer');
+                            container.innerHTML = '';
+                            logs.forEach(log => {
+                                container.appendChild(createLogElement(log));
+                            });
+                        } catch (error) {
+                            console.error('Error fetching logs:', error);
+                        }
+                    }
+
+                    // Initial fetch and auto-refresh
+                    fetchLogs();
+                    setInterval(fetchLogs, 3000);
+                </script>
+            </body>
+            </html>
