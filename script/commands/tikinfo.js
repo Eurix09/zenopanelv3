@@ -1,5 +1,5 @@
-const fs = require('fs');
 const path = require('path');
+const fs = require('fs');
 const axios = require('axios');
 
 module.exports = {
@@ -11,56 +11,30 @@ module.exports = {
 
   execute: async (bot, msg, args) => {
     try {
-      const chatId = msg.chat.id;
-      const username = args.join(" ").trim();
-
+      const username = args.join(" ");
       if (!username) {
-        return bot.sendMessage(
-          chatId,
-          "❌ Please enter a TikTok username.\nUsage: `/tikinfo <username>`",
-          { parse_mode: "Markdown" }
-        );
+        return bot.sendMessage(chatId, "Please enter a Tiktok username.");
       }
 
-      // API request
-      const { data } = await axios.get(`https://tikwm.com/api/user/info?unique_id=${username}`);
+      const response = await axios.get(`https://eurix-api.replit.app/tikstalk?username=${username}`);
+      const id = response.data.id;
+      const nickname = response.data.nickname;
+      const user = response.data.username;
+      const avatar = response.data.avatarLarger;
+      const follower = response.data.followerCount;
+      const following = response.data.followingCount;
+      const heart = response.data.heartCount;
 
-      if (!data || data.code !== 0 || !data.data || !data.data.user) {
-        return bot.sendMessage(chatId, "❌ Error: Unable to fetch user details.");
-      }
+      const title = path.join(__dirname, `/cache/${id}.png`);
 
-      const userInfo = data.data.user;
-      const stats = data.data.stats || {};
+      const getAvatar = await axios.get(avatar, { responseType: 'arraybuffer' });
 
-      const { id, uniqueId, nickname, avatarLarger, signature, secUid } = userInfo;
-      const { followerCount = 0, followingCount = 0, heartCount = 0, videoCount = 0 } = stats;
+      fs.writeFileSync(title, Buffer.from(getAvatar.data, 'binary'));
 
-      // Ensure cache directory exists
-      const cacheDir = path.join(__dirname, "cache");
-      if (!fs.existsSync(cacheDir)) {
-        fs.mkdirSync(cacheDir, { recursive: true });
-      }
-
-      const avatarPath = path.join(cacheDir, `${id}.png`);
-      const getAvatar = await axios.get(avatarLarger, { responseType: 'arraybuffer' });
-
-      fs.writeFileSync(avatarPath, Buffer.from(getAvatar.data, 'binary'));
-
-      bot.sendPhoto(chatId, fs.createReadStream(avatarPath), {
-        caption: `📌 *TikTok User Information*\n\n👤 *Username:* ${uniqueId}\n🏷️ *Nickname:* ${nickname}\n🆔 *ID:* ${id}\n🔑 *Sec UID:* ${secUid}\n📝 *Bio:* ${signature || "No bio available"}\n📹 *Videos:* ${videoCount}\n👥 *Followers:* ${followerCount}\n🔄 *Following:* ${followingCount}\n❤️ *Likes:* ${heartCount}`,
-        parse_mode: "Markdown",
-      });
-
-      // Delete cached avatar after sending the photo
-      setTimeout(() => {
-        if (fs.existsSync(avatarPath)) {
-          fs.unlinkSync(avatarPath);
-        }
-      }, 5000);
-
+      bot.sendPhoto(chatId, fs.createReadStream(title), { caption: `Tiktok Information\n\nUsername: ${user}\nNickname: ${nickname}\nId: ${id}\nFollower: ${follower}\nFollowing: ${following}\nHeart: ${heart}`});
     } catch (error) {
-      console.error(error);
-      bot.sendMessage(chatId, `❌ An error occurred while fetching TikTok information.\n\nError: ${error.message}`);
+      bot.sendMessage(chatId, `An error occurred while fetching the Tiktok information.\n${error}`);
+      console.log(error);
     }
   }
 };
