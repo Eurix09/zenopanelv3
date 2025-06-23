@@ -10,31 +10,41 @@ module.exports = {
   },
 
   execute: async (bot, msg, args) => {
+    const chatId = msg.chat.id; // ✅ Fixed missing variable
+
     try {
       const username = args.join(" ");
       if (!username) {
-        return bot.sendMessage(chatId, "Please enter a Tiktok username.");
+        return bot.sendMessage(chatId, "Please enter a TikTok username.");
       }
 
-      const response = await axios.get(`https://eurix-api.replit.app/tikstalk?username=${username}`);
-      const id = response.data.id;
-      const nickname = response.data.nickname;
-      const user = response.data.username;
-      const avatar = response.data.avatarLarger;
-      const follower = response.data.followerCount;
-      const following = response.data.followingCount;
-      const heart = response.data.heartCount;
+      const apiUrl = `https://tiktokstalk.onrender.com/tikstalk?username=${encodeURIComponent(username)}`;
+      const response = await axios.get(apiUrl);
 
-      const title = path.join(__dirname, `/cache/${id}.png`);
+      if (!response.data || !response.data.username) {
+        return bot.sendMessage(chatId, "Could not fetch data for the specified user.");
+      }
 
-      const getAvatar = await axios.get(avatar, { responseType: 'arraybuffer' });
+      const { id, nickname, username: user, avatarLarger: avatar, followerCount, followingCount, heartCount } = response.data;
 
-      fs.writeFileSync(title, Buffer.from(getAvatar.data, 'binary'));
+      const filePath = path.join(__dirname, `/cache/${id}.png`);
+      const avatarResponse = await axios.get(avatar, { responseType: 'arraybuffer' });
+      fs.writeFileSync(filePath, Buffer.from(avatarResponse.data, 'binary'));
 
-      bot.sendPhoto(chatId, fs.createReadStream(title), { caption: `Tiktok Information\n\nUsername: ${user}\nNickname: ${nickname}\nId: ${id}\nFollower: ${follower}\nFollowing: ${following}\nHeart: ${heart}`});
+      const caption = `📱 TikTok Information
+
+👤 Username: ${user}
+📛 Nickname: ${nickname}
+🆔 ID: ${id}
+👥 Followers: ${followerCount}
+🔄 Following: ${followingCount}
+❤️ Hearts: ${heartCount}`;
+
+      await bot.sendPhoto(chatId, fs.createReadStream(filePath), { caption });
+
     } catch (error) {
-      bot.sendMessage(chatId, `An error occurred while fetching the Tiktok information.\n${error}`);
-      console.log(error);
+      console.error("Error fetching TikTok data:", error);
+      bot.sendMessage(chatId, "❌ An error occurred while fetching the TikTok information.");
     }
   }
 };
