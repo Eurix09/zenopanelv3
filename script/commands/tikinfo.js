@@ -18,7 +18,7 @@ module.exports = {
         return bot.sendMessage(chatId, "Please enter a TikTok username.");
       }
 
-      const apiUrl = `https://tiktokstalk.onrender.com/tikstalk?username=${encodeURIComponent(username)}`;
+      const apiUrl = `https://tikinfo.onrender.com/tikstalk?username=${encodeURIComponent(username)}`;
       const response = await axios.get(apiUrl);
 
       if (!response.data || !response.data.username) {
